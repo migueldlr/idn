@@ -1,0 +1,36 @@
+{
+    "name": "pixi-project",
+    "version": "0.2.0",
+    "description": "Pixi.js project boiler plate using TypeScript, Webpack and Mocha",
+    "scripts": {
+        "build": "cross-env NODE_ENV=production webpack",
+        "serve": "webpack-dev-server --hot",
+        "test": "mocha tests"
+    },
+    "license": "MIT",
+    "devDependencies": {
+        "@typescript-eslint/eslint-plugin": "^2.31.0",
+        "@typescript-eslint/parser": "^2.31.0",
+        "clean-webpack-plugin": "^3.0.0",
+        "copy-webpack-plugin": "^5.1.1",
+        "cross-env": "^7.0.2",
+        "eslint": "^6.8.0",
+        "eslint-config-airbnb-base": "^14.1.0",
+        "eslint-config-airbnb-typescript": "^7.2.1",
+        "eslint-config-prettier": "^6.11.0",
+        "eslint-plugin-import": "^2.20.2",
+        "eslint-plugin-jsx-a11y": "^6.2.3",
+        "eslint-plugin-prettier": "^3.1.3",
+        "mocha": "^7.1.1",
+        "mocha-loader": "^5.0.0",
+        "prettier": "^2.0.5",
+        "ts-loader": "^6.2.2",
+        "typescript": "^3.8.3",
+        "webpack": "^4.42.1",
+        "webpack-cli": "^3.3.11",
+        "webpack-dev-server": "^3.10.3"
+    },
+    "dependencies": {
+        "pixi.js": "^5.2.1"
+    }
+}
