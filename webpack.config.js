@@ -7,7 +7,7 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 const config = {
     mode: isDev ? 'development' : 'production',
-    entry: './src/client/scripts/app.ts',
+    entry: './src/client/scripts/main.ts',
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'bundle.js',

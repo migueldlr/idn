@@ -1,42 +1,36 @@
-import * as express from 'express';
-import * as socketio from 'socket.io';
-import path = require('path');
+import http from 'http';
+import express from 'express';
+import cors from 'cors';
+import { Server } from 'colyseus';
+import { monitor } from '@colyseus/monitor';
+// import socialRoutes from "@colyseus/social/express"
 
-import Player from '../player';
+import { GameRoom } from './GameRoom';
 
+const port = Number(process.env.PORT || 2567);
 const app = express();
-const server = require('http').Server(app);
 
-const io = require('socket.io').listen(server);
+app.use(cors());
+app.use(express.json());
 
-const players: Record<string, Player> = {};
-
-// app.set('port', process.env.PORT || 8080);
-app.use(express.static('dist'));
-
-// simple '/' endpoint sending a Hello World
-// response
-app.get('/', (_req, res) => {
-    res.sendFile(path.join(__dirname, '../../dist/index.html'));
+const server = http.createServer(app);
+const gameServer = new Server({
+    server,
 });
 
-io.on('connection', (socket: socketio.Socket) => {
-    players[socket.id] = new Player(socket.id);
-    console.log('a user connected');
-    // send the players object to the new player
-    socket.emit('currentPlayers', players);
-    // update all other players of the new player
-    socket.broadcast.emit('newPlayer', players[socket.id]);
-    socket.on('disconnect', function () {
-        console.log('user disconnected');
-        // remove this player from our players object
-        delete players[socket.id];
-        // emit a message to all players to remove this player
-        io.emit('disconnect', socket.id);
-    });
-});
+// register your room handlers
+gameServer.define('game', GameRoom);
 
-// start our simple server up on localhost:8080
-server.listen(8080, function () {
-    console.log('listening on *:8080');
-});
+/**
+ * Register @colyseus/social routes
+ *
+ * - uncomment if you want to use default authentication (https://docs.colyseus.io/authentication/)
+ * - also uncomment the import statement
+ */
+// app.use("/", socialRoutes);
+
+// register colyseus monitor AFTER registering your room handlers
+app.use('/colyseus', monitor());
+
+gameServer.listen(port);
+console.log(`Listening on ws://localhost:${port}`);
