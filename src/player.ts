@@ -1,16 +1,21 @@
-import { Graphics, Point } from 'pixi.js';
+export interface Point {
+    x: number;
+    y: number;
+}
 
-export class Player {
+export default class Player {
+    public p: Point;
     public v: number;
     public a: number;
-    public g: Graphics;
     public nearest: number;
+    public id: string;
 
-    constructor(g: Graphics) {
+    constructor(id: string) {
         this.v = 0;
         this.a = 0;
-        this.g = g;
+        this.p = { x: Math.random() * 100, y: Math.random() * 100 };
         this.nearest = -1;
+        this.id = id;
     }
 
     getvx(): number {
@@ -22,17 +27,17 @@ export class Player {
     }
 
     getvcart(): Point {
-        return new Point(this.getvx(), this.getvy());
+        return { x: this.getvx(), y: this.getvy() };
     }
 
     setvx(dx: number): void {
         const { y: dy } = this.getvcart();
-        this.setva(new Point(dx, dy));
+        this.setva({ x: dx, y: dy });
     }
 
     setvy(dy: number): void {
         const { x: dx } = this.getvcart();
-        this.setva(new Point(dx, dy));
+        this.setva({ x: dx, y: dy });
     }
 
     setva(vcomp: Point): void {

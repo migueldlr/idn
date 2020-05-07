@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const isDev = process.env.NODE_ENV !== 'production';
 
 const config = {
     mode: isDev ? 'development' : 'production',
-    entry: './src/scripts/app.ts',
+    entry: './src/client/scripts/app.ts',
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'bundle.js',
@@ -26,16 +27,27 @@ const config = {
     plugins: [
         new CleanWebpackPlugin(),
         new CopyPlugin([
-            { from: 'src/index.html' },
-            { from: 'src/css/style.css', to: 'css/' },
-            { from: 'src/images/logo.png', to: 'images/' },
+            { from: 'src/client/css/style.css', to: 'css/' },
+            { from: 'src/client/images/logo.png', to: 'images/' },
         ]),
+        new HtmlWebpackPlugin({
+            template: './public/index.html',
+            // favicon: './public/gradyicon.png'
+        }),
     ],
     devServer: {
         contentBase: path.join(__dirname, 'dist'),
         compress: true,
         port: 3000,
         hot: true,
+        proxy: {
+            '/api': 'http://localhost:8080',
+
+            '/socket.io': {
+                target: 'http://localhost:8080',
+                ws: true,
+            },
+        },
     },
     optimization: {
         minimize: !isDev,
