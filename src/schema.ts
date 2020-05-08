@@ -38,4 +38,7 @@ export class GameState extends Schema {
 
     @type([Asteroid])
     asteroids = new ArraySchema<Asteroid>();
+
+    @type('number')
+    lastupdated = 0;
 }

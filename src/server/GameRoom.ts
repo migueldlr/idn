@@ -8,20 +8,27 @@ export class GameRoom extends Room<GameState> {
         this.initState();
         this.clock.start();
         this.setSimulationInterval((deltaTime) => this.update(deltaTime));
-        this.onMessage('move', (client, message: { dir: string }) => {
-            const { dir } = message;
-            const player: Player = this.state.players[client.id];
-            // handle "type" message
-            if (dir === 'left') {
-                player.a -= 0.05;
+        this.onMessage(
+            'move',
+            (client, message: { dir: string; time: number }) => {
+                const { dir, time } = message;
+                // console.log(`${time}  ${+new Date()}`);
+                const player: Player = this.state.players[client.id];
+                // handle "type" message
+                if (dir === 'left') {
+                    player.a -= 0.05;
+                }
+                if (dir === 'right') {
+                    player.a += 0.05;
+                }
+                if (dir === 'forward') {
+                    if (player.v < 5) player.v += 0.1;
+                }
+                if (dir === 'backward') {
+                    if (player.v > 0) player.v -= 0.1;
+                }
             }
-            if (dir === 'right') {
-                player.a += 0.05;
-            }
-            if (dir === 'forward') {
-                if (player.v < 5) player.v += 0.1;
-            }
-        });
+        );
     }
 
     onJoin(client: Client, _options: any): void {
@@ -61,5 +68,7 @@ export class GameRoom extends Room<GameState> {
             player.p.x += player.v * Math.cos(player.a);
             player.p.y += player.v * Math.sin(player.a);
         }
+
+        this.state.lastupdated = +new Date();
     }
 }

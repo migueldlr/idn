@@ -5,22 +5,33 @@ import { Player, GameState, Asteroid } from '../../../schema';
 import { addPlayerPoly, updatePlayerPoly } from '../PlayerUtil';
 import { makeAsteroids } from '../SceneUtil';
 
+interface PlayerInput {
+    dir: string;
+    time: number;
+}
+
 export default class GameScene extends Phaser.Scene {
-    player?: Phaser.GameObjects.Polygon;
+    playerPoly?: Phaser.GameObjects.Polygon;
+    player: Player;
     otherplayersDisplay: Record<string, Phaser.GameObjects.Polygon>;
     otherplayers: Record<string, Player>;
     client: Colyseus.Client;
     keys: { [s: string]: Phaser.Input.Keyboard.Key };
     room?: Colyseus.Room<GameState>;
     asteroidGroup: Phaser.GameObjects.Group;
+
+    pendingInput: PlayerInput[];
+
     constructor() {
         super('game-scene');
-        this.player = undefined;
+        this.player = new Player('');
+        this.playerPoly = undefined;
         this.otherplayersDisplay = {};
         this.otherplayers = {};
         this.asteroidGroup = new Phaser.GameObjects.Group(this);
         this.client = new Colyseus.Client('ws://localhost:2567');
         this.keys = {};
+        this.pendingInput = [];
     }
 
     preload(): void {
@@ -48,7 +59,8 @@ export default class GameScene extends Phaser.Scene {
     attachRoomListeners(room: Colyseus.Room<GameState>): void {
         room.state.players.onAdd = (player, id): void => {
             if (id === room.sessionId) {
-                this.player = addPlayerPoly(this, player, 'player');
+                this.player = player;
+                this.playerPoly = addPlayerPoly(this, player, 'player');
             } else {
                 this.otherplayers[id] = player;
                 this.otherplayersDisplay[id] = addPlayerPoly(this, player);
@@ -67,11 +79,13 @@ export default class GameScene extends Phaser.Scene {
         // Receive authoritative game state from server
         room.state.players.onChange = (player, id): void => {
             if (id === room.sessionId) {
-                updatePlayerPoly(player, this.player);
+                this.player = player;
+                updatePlayerPoly(player, this.playerPoly);
             } else {
                 this.otherplayers[id] = player;
                 updatePlayerPoly(player, this.otherplayersDisplay[id]);
             }
+            console.log(this.room?.state.lastupdated);
         };
 
         // room.state.asteroids.onChange = (asteroid: Asteroid) => {
@@ -90,14 +104,30 @@ export default class GameScene extends Phaser.Scene {
         if (this.room == null) {
             return;
         }
+        // TODO: have not yet done client-side reconciliation
         if (this.keys.LEFT.isDown) {
-            this.room.send('move', { dir: 'left' });
+            const input: PlayerInput = { dir: 'left', time: +new Date() };
+            this.room.send('move', input);
+            this.player.a -= 0.05;
+            // this.pendingInput.push(input);
         }
         if (this.keys.RIGHT.isDown) {
-            this.room.send('move', { dir: 'right' });
+            const input: PlayerInput = { dir: 'right', time: +new Date() };
+            this.room.send('move', input);
+            this.player.a += 0.05;
+            // this.pendingInput.push(input);
         }
         if (this.keys.UP.isDown) {
-            this.room.send('move', { dir: 'forward' });
+            const input: PlayerInput = { dir: 'forward', time: +new Date() };
+            this.room.send('move', input);
+            if (this.player.v < 5) this.player.v += 0.1;
+            // this.pendingInput.push(input);
+        }
+        if (this.keys.DOWN.isDown) {
+            const input: PlayerInput = { dir: 'backward', time: +new Date() };
+            this.room.send('move', input);
+            if (this.player.v > 0) this.player.v -= 0.1;
+            // this.pendingInput.push(input);
         }
 
         // interpolate movement for other players
@@ -112,6 +142,13 @@ export default class GameScene extends Phaser.Scene {
                 this.otherplayers[id],
                 this.otherplayersDisplay[id]
             );
+        }
+
+        // interpolate current player's movement
+        if (this.player != null) {
+            this.player.p.x += this.player.v * Math.cos(this.player.a);
+            this.player.p.y += this.player.v * Math.sin(this.player.a);
+            updatePlayerPoly(this.player, this.playerPoly);
         }
     }
 }
