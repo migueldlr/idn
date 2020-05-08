@@ -97,9 +97,10 @@ export default class GameScene extends Phaser.Scene {
         return poly;
     }
 
-    updatePlayer(player: Player, current?: Phaser.GameObjects.Polygon) {
+    updatePlayer(player: Player, current?: Phaser.GameObjects.Polygon): void {
         if (current == null) return;
         current.rotation = player.a;
+        current.setPosition(player.p.x, player.p.y);
     }
 
     update(_time: number, _delta: number): void {
@@ -113,6 +114,9 @@ export default class GameScene extends Phaser.Scene {
         }
         if (this.keys.RIGHT.isDown) {
             this.room.send('move', { dir: 'right' });
+        }
+        if (this.keys.UP.isDown) {
+            this.room.send('move', { dir: 'forward' });
         }
     }
 }

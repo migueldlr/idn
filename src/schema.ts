@@ -15,6 +15,9 @@ export class Player extends Schema {
     @type('number')
     a = 0;
 
+    @type('number')
+    v = 0;
+
     @type('string')
     id: string;
 
