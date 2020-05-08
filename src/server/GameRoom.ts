@@ -4,16 +4,21 @@ import { GameState, Player } from '../schema';
 export class GameRoom extends Room<GameState> {
     onCreate(_options?: any): void {
         this.setState(new GameState());
+        this.clock.start();
+        this.setSimulationInterval((deltaTime) => this.update(deltaTime), 200);
         this.onMessage('move', (client, message: { dir: string }) => {
             const { dir } = message;
+            const player: Player = this.state.players[client.id];
             // handle "type" message
             if (dir === 'left') {
-                this.state.players[client.id].a -= 0.05;
+                player.a -= 0.05;
             }
             if (dir === 'right') {
-                this.state.players[client.id].a += 0.05;
+                player.a += 0.05;
             }
-            console.log(`${client.id} ${dir}`);
+            if (dir === 'forward') {
+                if (player.v < 5) player.v += 0.1;
+            }
         });
     }
 
@@ -34,5 +39,14 @@ export class GameRoom extends Room<GameState> {
 
     onDispose(): void {
         console.log('disposing!');
+    }
+
+    update(_delta: number): void {
+        for (const id in this.state.players) {
+            const player = this.state.players[id];
+
+            player.p.x += player.v * Math.cos(player.a);
+            player.p.y += player.v * Math.sin(player.a);
+        }
     }
 }
