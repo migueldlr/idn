@@ -1,11 +1,13 @@
 import { Room, Client } from 'colyseus';
-import { GameState, Player } from '../schema';
+import { GameState, Player, Asteroid } from '../schema';
+import { SCENE_HEIGHT, SCENE_WIDTH } from '../constants';
 
 export class GameRoom extends Room<GameState> {
     onCreate(_options?: any): void {
-        this.setState(new GameState());
+        // adds in the asteroids
+        this.initState();
         this.clock.start();
-        this.setSimulationInterval((deltaTime) => this.update(deltaTime), 200);
+        this.setSimulationInterval((deltaTime) => this.update(deltaTime));
         this.onMessage('move', (client, message: { dir: string }) => {
             const { dir } = message;
             const player: Player = this.state.players[client.id];
@@ -24,12 +26,22 @@ export class GameRoom extends Room<GameState> {
 
     onJoin(client: Client, _options: any): void {
         console.log(`${client.id} joined`);
-        // client.send('currentPlayers', this.state.players);
+        client.send('asteroids', this.state.asteroids);
         const p = new Player(client.id);
         p.p.x = Math.random() * 100;
         p.p.y = Math.random() * 100;
         this.state.players[client.id] = p;
         // this.broadcast('playerJoined', this.state.players[client.id]);
+    }
+
+    initState(): void {
+        this.setState(new GameState());
+        for (let i = 0; i < 20; i++) {
+            const asteroid = new Asteroid();
+            asteroid.p.x = Math.random() * SCENE_WIDTH;
+            asteroid.p.y = Math.random() * SCENE_HEIGHT;
+            this.state.asteroids.push(asteroid);
+        }
     }
 
     onLeave(client: Client, _consented: boolean): void {
@@ -41,6 +53,7 @@ export class GameRoom extends Room<GameState> {
         console.log('disposing!');
     }
 
+    // update game state (60fps)
     update(_delta: number): void {
         for (const id in this.state.players) {
             const player = this.state.players[id];

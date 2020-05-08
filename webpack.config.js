@@ -11,6 +11,7 @@ const config = {
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'bundle.js',
+        publicPath: '/',
     },
     resolve: {
         extensions: ['.tsx', '.ts', '.js'],
@@ -28,7 +29,7 @@ const config = {
         new CleanWebpackPlugin(),
         new CopyPlugin([
             { from: 'src/client/css/style.css', to: 'css/' },
-            { from: 'src/client/images/logo.png', to: 'images/' },
+            { from: 'src/client/images', to: 'images' },
         ]),
         new HtmlWebpackPlugin({
             template: './public/index.html',

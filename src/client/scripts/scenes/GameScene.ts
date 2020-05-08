@@ -1,23 +1,31 @@
 import * as Phaser from 'phaser';
 import * as Colyseus from 'colyseus.js';
 
-import { Player, GameState } from '../../../schema';
+import { Player, GameState, Asteroid } from '../../../schema';
+import { addPlayerPoly, updatePlayerPoly } from '../PlayerUtil';
+import { makeAsteroids } from '../SceneUtil';
 
 export default class GameScene extends Phaser.Scene {
     player?: Phaser.GameObjects.Polygon;
-    otherplayers: Record<string, Phaser.GameObjects.Polygon>;
+    otherplayersDisplay: Record<string, Phaser.GameObjects.Polygon>;
+    otherplayers: Record<string, Player>;
     client: Colyseus.Client;
     keys: { [s: string]: Phaser.Input.Keyboard.Key };
     room?: Colyseus.Room<GameState>;
+    asteroidGroup: Phaser.GameObjects.Group;
     constructor() {
         super('game-scene');
         this.player = undefined;
+        this.otherplayersDisplay = {};
         this.otherplayers = {};
+        this.asteroidGroup = new Phaser.GameObjects.Group(this);
         this.client = new Colyseus.Client('ws://localhost:2567');
         this.keys = {};
     }
 
-    // preload(): void {}
+    preload(): void {
+        this.load.image('asteroid', 'images/asteroidOne.png');
+    }
 
     create(): void {
         this.keys = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT') as {
@@ -27,85 +35,58 @@ export default class GameScene extends Phaser.Scene {
             .joinOrCreate<GameState>('game')
             .then((room) => {
                 this.room = room;
-                room.state.players.onAdd = (player, id): void => {
-                    if (id === room.sessionId) {
-                        this.player = this.addPlayer(player);
-                        this.player.name = 'player';
-                    } else {
-                        this.otherplayers[id] = this.addPlayer(player);
-                    }
-                };
+                console.log(this.room.state.asteroids.length);
 
-                room.state.players.onRemove = (_, id): void => {
-                    console.log(`${id} left!`);
-                    this.otherplayers[id].destroy();
-                    delete this.otherplayers[id];
-
-                    console.log(`${JSON.stringify(this.otherplayers)}`);
-                };
-
-                room.state.players.onChange = (player, id): void => {
-                    if (id === room.sessionId) {
-                        this.updatePlayer(player, this.player);
-                    } else {
-                        this.updatePlayer(player, this.otherplayers[id]);
-                    }
-                };
+                this.attachRoomListeners(this.room);
             })
             .catch((e) => {
                 console.error('JOIN ERROR', e);
             });
-        // this.socket.on('currentPlayers', (players: Record<string, Player>) => {
-        //     console.log(players);
-        //     Object.keys(players).forEach((id) => {
-        //         if (players[id].id === this.socket.id) {
-        //             this.addPlayer(players[id]);
-        //         }
-        //         //  else {
-        //         //     addOtherPlayer(players[id]);
-        //         // }
-        //     });
-        // });
-
-        // this.socket.on('newPlayer', function (playerInfo: Player) {
-        //     addOtherPlayer(playerInfo);
-        // });
-
-        // this.socket.on('disconnect', function (playerId: string) {
-        //     otherplayers.children.forEach(function (otherPlayer) {
-        //         if (playerId === otherPlayer.name) {
-        //             otherPlayer.destroy();
-        //         }
-        //     });
-        // });
     }
 
-    addPlayer(player: Player): Phaser.GameObjects.Polygon {
-        const path: number[][] = [
-            [10, 0],
-            [-5, 5],
-            [0, 0],
-            [-5, -5],
-            [10, 0],
-        ];
-        // player = new Player(poly);
-        // player.g.position.x = engine.renderer.width / 2;
-        // player.g.position.y = engine.renderer.height / 2;
-        const poly = this.add.polygon(player.p.x, player.p.y, path, 0xffffff);
-        poly.setOrigin(0);
-        poly.rotation = player.a;
-        return poly;
-    }
+    // adds what to do if a player joins, leaves, or changes to the room
+    attachRoomListeners(room: Colyseus.Room<GameState>): void {
+        room.state.players.onAdd = (player, id): void => {
+            if (id === room.sessionId) {
+                this.player = addPlayerPoly(this, player, 'player');
+            } else {
+                this.otherplayers[id] = player;
+                this.otherplayersDisplay[id] = addPlayerPoly(this, player);
+            }
+        };
 
-    updatePlayer(player: Player, current?: Phaser.GameObjects.Polygon): void {
-        if (current == null) return;
-        current.rotation = player.a;
-        current.setPosition(player.p.x, player.p.y);
+        room.state.players.onRemove = (_, id): void => {
+            console.log(`${id} left!`);
+            this.otherplayersDisplay[id].destroy();
+            delete this.otherplayersDisplay[id];
+            delete this.otherplayers[id];
+
+            console.log(`${JSON.stringify(this.otherplayers)}`);
+        };
+
+        // Receive authoritative game state from server
+        room.state.players.onChange = (player, id): void => {
+            if (id === room.sessionId) {
+                updatePlayerPoly(player, this.player);
+            } else {
+                this.otherplayers[id] = player;
+                updatePlayerPoly(player, this.otherplayersDisplay[id]);
+            }
+        };
+
+        // room.state.asteroids.onChange = (asteroid: Asteroid) => {
+        //     console.log('asteroids changed');
+        //     makeAsteroids(this.asteroidGroup, asteroid);
+        // };
+
+        room.onMessage('asteroids', (asteroids: Asteroid[]) => {
+            asteroids.forEach((asteroid) => {
+                makeAsteroids(this.asteroidGroup, asteroid);
+            });
+        });
     }
 
     update(_time: number, _delta: number): void {
-        // console.log(`${time} ${delta}`);
-        // if (this.keys.left)
         if (this.room == null) {
             return;
         }
@@ -117,6 +98,20 @@ export default class GameScene extends Phaser.Scene {
         }
         if (this.keys.UP.isDown) {
             this.room.send('move', { dir: 'forward' });
+        }
+
+        // interpolate movement for other players
+        for (const id in this.otherplayers) {
+            const otherPlayer: Player = this.otherplayers[id];
+            otherPlayer.p.x += otherPlayer.v * Math.cos(otherPlayer.a);
+            otherPlayer.p.y += otherPlayer.v * Math.sin(otherPlayer.a);
+        }
+
+        for (const id in this.otherplayers) {
+            updatePlayerPoly(
+                this.otherplayers[id],
+                this.otherplayersDisplay[id]
+            );
         }
     }
 }

@@ -1,4 +1,4 @@
-import { Schema, MapSchema, type } from '@colyseus/schema';
+import { Schema, ArraySchema, MapSchema, type } from '@colyseus/schema';
 
 export class Point extends Schema {
     @type('float64')
@@ -27,7 +27,15 @@ export class Player extends Schema {
     }
 }
 
+export class Asteroid extends Schema {
+    @type(Point)
+    p: Point = new Point();
+}
+
 export class GameState extends Schema {
     @type({ map: Player })
     players = new MapSchema<Player>();
+
+    @type([Asteroid])
+    asteroids = new ArraySchema<Asteroid>();
 }
