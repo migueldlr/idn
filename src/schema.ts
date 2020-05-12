@@ -8,6 +8,11 @@ export class Point extends Schema {
     y = 0;
 }
 
+export class Asteroid extends Schema {
+    @type(Point)
+    p: Point = new Point();
+}
+
 export class Player extends Schema {
     @type(Point)
     p: Point = new Point();
@@ -21,15 +26,15 @@ export class Player extends Schema {
     @type('string')
     id: string;
 
+    pressingSpace = false;
+
+    @type(Asteroid)
+    nearestAsteroid: Asteroid = new Asteroid();
+
     constructor(id: string) {
         super();
         this.id = id;
     }
-}
-
-export class Asteroid extends Schema {
-    @type(Point)
-    p: Point = new Point();
 }
 
 export class GameState extends Schema {

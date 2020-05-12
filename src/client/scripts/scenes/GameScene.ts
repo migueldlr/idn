@@ -18,8 +18,8 @@ export default class GameScene extends Phaser.Scene {
     client: Colyseus.Client;
     keys: { [s: string]: Phaser.Input.Keyboard.Key };
     room?: Colyseus.Room<GameState>;
-    asteroidGroup: Phaser.GameObjects.Group;
-
+    displayAsteroidGroup: Phaser.GameObjects.Group;
+    asteroidGroup: Asteroid[];
     pendingInput: PlayerInput[];
 
     constructor() {
@@ -28,7 +28,8 @@ export default class GameScene extends Phaser.Scene {
         this.playerPoly = undefined;
         this.otherplayersDisplay = {};
         this.otherplayers = {};
-        this.asteroidGroup = new Phaser.GameObjects.Group(this);
+        this.displayAsteroidGroup = new Phaser.GameObjects.Group(this);
+        this.asteroidGroup = [];
         this.client = new Colyseus.Client('ws://localhost:2567');
         this.keys = {};
         this.pendingInput = [];
@@ -39,7 +40,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create(): void {
-        this.keys = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT') as {
+        this.keys = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,SPACE') as {
             [s: string]: Phaser.Input.Keyboard.Key;
         };
         this.client
@@ -85,7 +86,7 @@ export default class GameScene extends Phaser.Scene {
                 this.otherplayers[id] = player;
                 updatePlayerPoly(player, this.otherplayersDisplay[id]);
             }
-            console.log(this.room?.state.lastupdated);
+            //console.log(this.room?.state.lastupdated);
         };
 
         // room.state.asteroids.onChange = (asteroid: Asteroid) => {
@@ -95,7 +96,7 @@ export default class GameScene extends Phaser.Scene {
 
         room.onMessage('asteroids', (asteroids: Asteroid[]) => {
             asteroids.forEach((asteroid) => {
-                makeAsteroids(this.asteroidGroup, asteroid);
+                makeAsteroids(this.displayAsteroidGroup, asteroid);
             });
         });
     }
@@ -104,6 +105,65 @@ export default class GameScene extends Phaser.Scene {
         if (this.room == null) {
             return;
         }
+        const getClosestAsteroid = function (
+            player: Player,
+            allAsteroids: Asteroid[]
+        ): Asteroid {
+            let minDistance = 600 * 800;
+            // this function def should probably go somewhere else
+            const dist = function (
+                x1: number,
+                x2: number,
+                y1: number,
+                y2: number
+            ): number {
+                return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+            };
+            let closestAsteroid: Asteroid = allAsteroids[0];
+            // console.log(allAsteroids);
+            // goes through all the asteroids and find the closest one
+            // allAsteroids.forEach((ast) => {
+            for (let i = 0; i < allAsteroids.length; i++) {
+                const ast = allAsteroids[i];
+                const tempDistance = dist(
+                    ast.p.x,
+                    player.p.x,
+                    ast.p.y,
+                    player.p.y
+                );
+                if (tempDistance < minDistance) {
+                    minDistance = tempDistance;
+                    closestAsteroid = ast;
+                }
+            }
+
+            // });
+            return closestAsteroid;
+        };
+        // need to get them as sprites so you can get the x and y positions
+        const allAsteroids: Asteroid[] = this.room.state.asteroids;
+        const closestAsteroid: Asteroid = getClosestAsteroid(
+            this.player,
+            allAsteroids
+        );
+        // set which asteroid is closest on our player object, used when we are not the main player
+        this.player.nearestAsteroid = closestAsteroid;
+        // delete the old line if it exists
+        this.children.getByName('line')?.destroy();
+        // make the new line
+        const lineToAsteroid = this.add
+            .line(
+                0,
+                0,
+                this.player.p.x,
+                this.player.p.y,
+                closestAsteroid.p.x,
+                closestAsteroid.p.y,
+                0xffffff
+            )
+            .setOrigin(0, 0)
+            .setName('line');
+
         // TODO: have not yet done client-side reconciliation
         if (this.keys.LEFT.isDown) {
             const input: PlayerInput = { dir: 'left', time: +new Date() };
@@ -128,6 +188,10 @@ export default class GameScene extends Phaser.Scene {
             this.room.send('move', input);
             if (this.player.v > 0) this.player.v -= 0.1;
             // this.pendingInput.push(input);
+        }
+        if (this.keys.SPACE.isDown) {
+            this.player.pressingSpace = true;
+            lineToAsteroid.setLineWidth(3);
         }
 
         // interpolate movement for other players
