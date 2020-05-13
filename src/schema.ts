@@ -29,7 +29,7 @@ export class Player extends Schema {
     pressingSpace = false;
 
     @type(Asteroid)
-    nearestAsteroid: Asteroid = new Asteroid();
+    closestAsteroid: Asteroid = new Asteroid();
 
     constructor(id: string) {
         super();
