@@ -33,8 +33,8 @@ export class GameRoom extends Room<GameState> {
 
     onJoin(client: Client, _options: any): void {
         console.log(`${client.id} joined`);
-        client.send('asteroids', this.state.asteroids);
         const p = new Player(client.id);
+        client.send('asteroids', this.state.asteroids);
         p.p.x = Math.random() * 100;
         p.p.y = Math.random() * 100;
         this.state.players[client.id] = p;
@@ -62,11 +62,53 @@ export class GameRoom extends Room<GameState> {
 
     // update game state (60fps)
     update(_delta: number): void {
+        const getClosestAsteroid = function (
+            player: Player,
+            allAsteroids: Asteroid[]
+        ): Asteroid {
+            let minDistance = 600 * 800;
+            // this function def should probably go somewhere else
+            const dist = function (
+                x1: number,
+                x2: number,
+                y1: number,
+                y2: number
+            ): number {
+                return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+            };
+            // temporary value of the first asteroid
+            let closestAsteroid: Asteroid = allAsteroids[0];
+            allAsteroids.forEach((ast) => {
+                const tempDistance = dist(
+                    ast.p.x,
+                    player.p.x,
+                    ast.p.y,
+                    player.p.y
+                );
+                if (tempDistance < minDistance) {
+                    minDistance = tempDistance;
+                    closestAsteroid = ast;
+                }
+            });
+            return closestAsteroid;
+        };
+        // need to get them as sprites so you can get the x and y positions
+        const allAsteroids: Asteroid[] = this.state.asteroids;
+
+        // update positions and lines
         for (const id in this.state.players) {
             const player = this.state.players[id];
 
             player.p.x += player.v * Math.cos(player.a);
             player.p.y += player.v * Math.sin(player.a);
+
+            const closestAsteroid: Asteroid = getClosestAsteroid(
+                player,
+                allAsteroids
+            );
+            // set which asteroid is closest on our player object, used when we are not the main player
+            player.closestAsteroid = closestAsteroid;
+            console.log(player.closestAsteroid.p.x, player.closestAsteroid.p.y);
         }
 
         this.state.lastupdated = +new Date();
