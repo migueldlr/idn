@@ -111,10 +111,11 @@ export default class GameScene extends Phaser.Scene {
         // delete the old line if it exists
         this.children.getByName('line' + this.player.id)?.destroy();
         // make the new line between the asteroid and the player
-        console.log(
-            this.player.closestAsteroid.p.x,
-            this.player.closestAsteroid.p.y
-        );
+        // console.log(
+        //     this.player.closestAsteroid.p.x,
+        //     this.player.closestAsteroid.p.y
+        // );
+        console.log(this.player.p.x, this.player.p.y);
         const lineToAsteroid = this.add
             .line(
                 0,
@@ -154,6 +155,8 @@ export default class GameScene extends Phaser.Scene {
             // this.pendingInput.push(input);
         }
         if (this.keys.SPACE.isDown) {
+            const input: PlayerInput = { dir: 'space', time: +new Date() };
+            this.room.send('move', input);
             this.player.pressingSpace = true;
             lineToAsteroid.setLineWidth(3);
         }
