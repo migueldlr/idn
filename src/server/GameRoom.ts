@@ -29,11 +29,14 @@ export class GameRoom extends Room<GameState> {
                     if (player.v > 0) player.v -= 0.1;
                 }
                 if (dir === 'space') {
-                    const r = distance(
-                        player.p.x,
-                        player.p.y,
-                        player.closestAsteroid.p.x,
-                        player.closestAsteroid.p.y
+                    const r = Math.max(
+                        distance(
+                            player.p.x,
+                            player.p.y,
+                            player.closestAsteroid.p.x,
+                            player.closestAsteroid.p.y
+                        ) * 2,
+                        0.5
                     );
                     const angle = angleBetween(
                         player.p.x,
@@ -41,12 +44,14 @@ export class GameRoom extends Room<GameState> {
                         player.closestAsteroid.p.x,
                         player.closestAsteroid.p.y
                     );
-                    // TODO: this is absolutely not even close but I need to put something here to not forget about it
-                    const forceScalingFactor = -30;
-                    const angleScalingFactor = 0.5;
-                    const force = forceScalingFactor / r ** 2;
-                    player.v += force;
-                    player.a += angle * angleScalingFactor;
+                    const dx = player.closestAsteroid.p.x - player.p.x;
+                    const dy = player.closestAsteroid.p.y - player.p.y;
+                    const invsqrr = 1 / (r * r);
+                    const g = 30;
+                    player.p.x +=
+                        g * dx * invsqrr * Math.cos(player.a) * player.v;
+                    player.p.y +=
+                        g * dy * invsqrr * Math.sin(player.a) * player.v;
                 }
             }
         );
@@ -96,7 +101,7 @@ export class GameRoom extends Room<GameState> {
             );
             // set which asteroid is closest on our player object
             player.closestAsteroid = closestAsteroid;
-            console.log(player.closestAsteroid.p.x, player.closestAsteroid.p.y);
+            // console.log(player.closestAsteroid.p.x, player.closestAsteroid.p.y);
         }
 
         this.state.lastupdated = +new Date();
