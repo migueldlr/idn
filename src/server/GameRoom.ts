@@ -90,7 +90,7 @@ export class GameRoom extends Room<GameState> {
     update(_delta: number): void {
         // update positions and lines
         for (const id in this.state.players) {
-            const player = this.state.players[id];
+            const player: Player = this.state.players[id];
 
             player.p.x += player.v * Math.cos(player.a);
             player.p.y += player.v * Math.sin(player.a);
@@ -99,9 +99,9 @@ export class GameRoom extends Room<GameState> {
                 player,
                 this.state.asteroids
             );
-            // set which asteroid is closest on our player object
-            player.closestAsteroid = closestAsteroid;
-            // console.log(player.closestAsteroid.p.x, player.closestAsteroid.p.y);
+            // If we just reassign closestAsteroid, Colyseus doesn't autoupdate for us
+            player.closestAsteroid.p.x = closestAsteroid.p.x;
+            player.closestAsteroid.p.y = closestAsteroid.p.y;
         }
 
         this.state.lastupdated = +new Date();

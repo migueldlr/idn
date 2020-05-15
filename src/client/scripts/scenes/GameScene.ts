@@ -115,7 +115,7 @@ export default class GameScene extends Phaser.Scene {
         //     this.player.closestAsteroid.p.x,
         //     this.player.closestAsteroid.p.y
         // );
-        console.log(this.player.p.x, this.player.p.y);
+        // console.log(this.player.p.x, this.player.p.y);
         const lineToAsteroid = this.add
             .line(
                 0,

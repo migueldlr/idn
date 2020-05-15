@@ -26,6 +26,7 @@ export class Player extends Schema {
     @type('string')
     id: string;
 
+    @type('boolean')
     pressingSpace = false;
 
     @type(Asteroid)
